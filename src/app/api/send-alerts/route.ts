@@ -39,6 +39,11 @@ export async function POST(request: Request) {
         }
 
         // 3. Compose Email
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            console.error('Missing email credentials')
+            return NextResponse.json({ error: 'Missing email credentials in environment variables' }, { status: 500 })
+        }
+
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {

@@ -28,9 +28,13 @@ export default function DashboardPage() {
 
         if (lastSent !== today) {
             try {
-                await fetch('/api/send-alerts', { method: 'POST' })
-                localStorage.setItem('last_alert_date', today)
-                console.log('Alert check triggered')
+                const res = await fetch('/api/send-alerts', { method: 'POST' })
+                if (res.ok) {
+                    localStorage.setItem('last_alert_date', today)
+                    console.log('Alert check triggered successfully')
+                } else {
+                    console.error('Alert check failed:', await res.text())
+                }
             } catch (error) {
                 console.error('Failed to trigger alert check:', error)
             }
