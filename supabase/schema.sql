@@ -17,6 +17,8 @@ create table if not exists products (
   price numeric not null,
   stock_quantity integer not null default 0,
   expiry_date date,
+  low_stock_threshold integer not null default 50,
+  expiry_alert_days integer not null default 20,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

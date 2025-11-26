@@ -23,14 +23,14 @@ export default function DashboardPage() {
     }, [])
 
     const checkEmailAlerts = async () => {
-        const lastSent = localStorage.getItem('last_alert_date')
+        const lastSent = localStorage.getItem('last_alert_date_v2')
         const today = new Date().toDateString()
 
         if (lastSent !== today) {
             try {
                 const res = await fetch('/api/send-alerts', { method: 'POST' })
                 if (res.ok) {
-                    localStorage.setItem('last_alert_date', today)
+                    localStorage.setItem('last_alert_date_v2', today)
                     console.log('Alert check triggered successfully')
                 } else {
                     console.error('Alert check failed:', await res.text())

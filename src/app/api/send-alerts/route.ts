@@ -14,7 +14,77 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // 1. Fetch Products
+        // Check for specific new product alert
+        let newProduct = null
+        try {
+            const body = await request.json()
+            newProduct = body.newProduct
+        } catch (e) {
+            // Request might not have body (e.g. cron job), ignore error
+        }
+
+        if (newProduct) {
+            // Validate if alert is actually needed
+            const stock = Number(newProduct.stock_quantity)
+            const threshold = Number(newProduct.low_stock_threshold) || 50
+            const isLowStock = stock < threshold
+
+            let isExpiring = false
+            if (newProduct.expiry_date) {
+                const expiry = new Date(newProduct.expiry_date)
+                const alertDays = Number(newProduct.expiry_alert_days) || 20
+                const today = new Date()
+                const alertDate = new Date()
+                alertDate.setDate(today.getDate() + alertDays)
+
+                // Reset time components for accurate date comparison
+                today.setHours(0, 0, 0, 0)
+                alertDate.setHours(23, 59, 59, 999)
+
+                isExpiring = expiry <= alertDate && expiry >= today
+            }
+
+            if (!isLowStock && !isExpiring) {
+                return NextResponse.json({ message: 'No alert needed' })
+            }
+
+            // Send specific alert for the new product
+            if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+                console.error('Missing email credentials')
+                return NextResponse.json({ error: 'Missing email credentials' }, { status: 500 })
+            }
+
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            })
+
+            const htmlContent = `
+                <h2>New Product Alert: ${newProduct.name}</h2>
+                <p>A new product has been added that requires attention:</p>
+                <ul>
+                    <li><strong>Name:</strong> ${newProduct.name}</li>
+                    <li><strong>Category:</strong> ${newProduct.category || 'N/A'}</li>
+                    <li><strong>Price:</strong> ${newProduct.price}</li>
+                    <li><strong>Stock Quantity:</strong> <strong style="color: ${Number(newProduct.stock_quantity) < (Number(newProduct.low_stock_threshold) || 50) ? '#dc2626' : 'inherit'}">${newProduct.stock_quantity}</strong> (Threshold: ${newProduct.low_stock_threshold || 50})</li>
+                    <li><strong>Expiry Date:</strong> <strong style="color: #d97706">${newProduct.expiry_date || 'N/A'}</strong> (Alert: ${newProduct.expiry_alert_days || 20} days before)</li>
+                </ul>
+            `
+
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: `New Product Alert: ${newProduct.name}`,
+                html: htmlContent,
+            })
+
+            return NextResponse.json({ success: true, message: 'New product alert sent' })
+        }
+
+        // 1. Fetch Products (Legacy/Cron logic)
         const { data: products } = await supabase
             .from('products')
             .select('*')
@@ -22,16 +92,19 @@ export async function POST(request: Request) {
         if (!products) return NextResponse.json({ message: 'No products found' })
 
         // 2. Check Alerts
-        const lowStock = products.filter(p => p.stock_quantity < 10)
+        const lowStock = products.filter(p => p.stock_quantity < (p.low_stock_threshold ?? 50))
 
         const today = new Date()
-        const sevenDaysFromNow = new Date()
-        sevenDaysFromNow.setDate(today.getDate() + 7)
 
         const expiring = products.filter(p => {
             if (!p.expiry_date) return false
             const expiry = new Date(p.expiry_date)
-            return expiry <= sevenDaysFromNow && expiry >= today
+            const alertDays = p.expiry_alert_days ?? 20
+
+            const alertDate = new Date()
+            alertDate.setDate(today.getDate() + alertDays)
+
+            return expiry <= alertDate && expiry >= today
         })
 
         if (lowStock.length === 0 && expiring.length === 0) {
