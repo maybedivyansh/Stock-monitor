@@ -71,7 +71,7 @@ export default function ProductList() {
                                 </div>
                                 <div className="flex items-center space-x-4">
                                     <div className="text-right">
-                                        <p className="text-sm font-medium text-gray-900">${product.price}</p>
+                                        <p className="text-sm font-medium text-gray-900">₹{product.price}</p>
                                         <p className={`text-sm ${product.stock_quantity < 10 ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
                                             Stock: {product.stock_quantity}
                                         </p>

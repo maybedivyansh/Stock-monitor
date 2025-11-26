@@ -68,7 +68,7 @@ export default function ProductForm() {
                 <label className="block text-sm font-medium text-gray-700">Product Name</label>
                 <input
                     {...register('name')}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
@@ -77,7 +77,7 @@ export default function ProductForm() {
                 <label className="block text-sm font-medium text-gray-700">Category</label>
                 <input
                     {...register('category')}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                 />
             </div>
 
@@ -88,7 +88,7 @@ export default function ProductForm() {
                         type="number"
                         step="0.01"
                         {...register('price')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                     />
                     {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>}
                 </div>
@@ -98,7 +98,7 @@ export default function ProductForm() {
                     <input
                         type="number"
                         {...register('stock_quantity')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                     />
                     {errors.stock_quantity && <p className="mt-1 text-sm text-red-600">{errors.stock_quantity.message}</p>}
                 </div>
@@ -109,7 +109,7 @@ export default function ProductForm() {
                 <input
                     type="date"
                     {...register('expiry_date')}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                 />
             </div>
 

@@ -70,7 +70,7 @@ export default function RecentSales({ key }: { key?: number }) {
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm font-bold text-gray-900">${sale.total_price}</p>
+                                <p className="text-sm font-bold text-gray-900">₹{sale.total_price}</p>
                                 <p className="text-xs text-gray-500">Qty: {sale.quantity}</p>
                             </div>
                         </div>

@@ -122,12 +122,12 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
                     <select
                         {...register('product_id')}
                         onChange={handleProductChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                     >
                         <option value="">Select a product</option>
                         {products.map((p) => (
                             <option key={p.id} value={p.id}>
-                                {p.name} (${p.price}) - Stock: {p.stock_quantity}
+                                {p.name} (₹{p.price}) - Stock: {p.stock_quantity}
                             </option>
                         ))}
                     </select>
@@ -139,7 +139,7 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
                     <input
                         type="number"
                         {...register('quantity')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
                     />
                     {errors.quantity && <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>}
                 </div>
@@ -147,7 +147,7 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
                 {selectedProduct && (
                     <div className="bg-gray-50 p-3 rounded-md flex items-center justify-between">
                         <span className="text-sm text-gray-500">Total Price:</span>
-                        <span className="text-lg font-bold text-indigo-600">${totalPrice.toFixed(2)}</span>
+                        <span className="text-lg font-bold text-indigo-600">₹{totalPrice.toFixed(2)}</span>
                     </div>
                 )}
 
