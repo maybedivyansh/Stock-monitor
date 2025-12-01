@@ -12,6 +12,9 @@ const saleSchema = z.object({
     quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
         message: 'Quantity must be a valid positive number',
     }),
+    unit_price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+        message: 'Price must be a valid positive number',
+    }),
 })
 
 type SaleFormValues = z.infer<typeof saleSchema>
@@ -21,6 +24,8 @@ interface Product {
     name: string
     price: number
     stock_quantity: number
+    procurement_price?: number
+    lot_size?: number
 }
 
 export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () => void }) {
@@ -41,6 +46,7 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
     })
 
     const quantity = watch('quantity')
+    const unitPrice = watch('unit_price')
 
     useEffect(() => {
         fetchProducts()
@@ -49,7 +55,7 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
     const fetchProducts = async () => {
         const { data } = await supabase
             .from('products')
-            .select('id, name, price, stock_quantity')
+            .select('id, name, price, stock_quantity, procurement_price, lot_size')
             .gt('stock_quantity', 0) // Only show products in stock
             .order('name')
 
@@ -61,6 +67,11 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
         const product = products.find(p => p.id === productId) || null
         setSelectedProduct(product)
         setValue('product_id', productId) // Manually set value for react-hook-form
+        if (product) {
+            setValue('unit_price', product.price.toString())
+        } else {
+            setValue('unit_price', '')
+        }
     }
 
     const onSubmit = async (data: SaleFormValues) => {
@@ -77,14 +88,26 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('No user found')
 
-            const totalPrice = selectedProduct.price * qty
+            const unitPrice = Number(data.unit_price)
+            const totalPrice = unitPrice * qty
+
+            // Calculate Net Profit
+            // Formula: (Selling Price - (Procurement Price / Lot Size)) * Quantity
+            let profit = null
+            if (selectedProduct.procurement_price && selectedProduct.lot_size) {
+                const unitProcurementCost = selectedProduct.procurement_price / selectedProduct.lot_size
+                const unitProfit = unitPrice - unitProcurementCost
+                profit = unitProfit * qty
+            }
 
             // 1. Record Sale
             const { error: saleError } = await supabase.from('sales').insert({
                 user_id: user.id,
                 product_id: selectedProduct.id,
                 quantity: qty,
+                unit_price: unitPrice,
                 total_price: totalPrice,
+                profit: profit,
             })
             if (saleError) throw saleError
 
@@ -111,7 +134,7 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
         }
     }
 
-    const totalPrice = selectedProduct && quantity ? selectedProduct.price * Number(quantity) : 0
+    const totalPrice = unitPrice && quantity ? Number(unitPrice) * Number(quantity) : 0
 
     return (
         <div className="bg-white p-6 rounded-lg shadow">
@@ -132,6 +155,22 @@ export default function SalesEntryForm({ onSaleComplete }: { onSaleComplete: () 
                         ))}
                     </select>
                     {errors.product_id && <p className="mt-1 text-sm text-red-600">{errors.product_id.message}</p>}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Selling Price (Per Unit)</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        {...register('unit_price')}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
+                    />
+                    {selectedProduct && (
+                        <p className="mt-1 text-xs text-gray-500">
+                            Default MRP: ₹{selectedProduct.price}
+                        </p>
+                    )}
+                    {errors.unit_price && <p className="mt-1 text-sm text-red-600">{errors.unit_price.message}</p>}
                 </div>
 
                 <div>

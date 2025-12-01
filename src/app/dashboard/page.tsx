@@ -11,6 +11,8 @@ export default function DashboardPage() {
         totalProducts: 0,
         totalSales: 0,
         lowStockCount: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
     })
     const [alerts, setAlerts] = useState<any[]>([])
     const [salesData, setSalesData] = useState<any[]>([])
@@ -52,7 +54,15 @@ export default function DashboardPage() {
                 .from('sales')
                 .select('*', { count: 'exact', head: true })
 
-            // 2. Fetch Alerts
+            // 2. Fetch Financials (Revenue & Profit)
+            const { data: allSales } = await supabase
+                .from('sales')
+                .select('total_price, profit')
+
+            const totalRevenue = allSales?.reduce((sum, sale) => sum + (Number(sale.total_price) || 0), 0) || 0
+            const totalProfit = allSales?.reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0) || 0
+
+            // 3. Fetch Alerts
             const currentAlerts = await checkAlerts()
             const lowStockAlert = currentAlerts.find(a => a.type === 'LOW_STOCK')
 
@@ -60,6 +70,8 @@ export default function DashboardPage() {
                 totalProducts: productCount || 0,
                 totalSales: salesCount || 0,
                 lowStockCount: lowStockAlert ? (lowStockAlert.items as any[]).length : 0,
+                totalRevenue,
+                totalProfit,
             })
             setAlerts(currentAlerts)
 
@@ -118,19 +130,59 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Total Sales */}
+                {/* Total Sales Count */}
                 <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
-                                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                                     <ShoppingCart className="h-6 w-6" />
                                 </div>
                             </div>
                             <div className="ml-5 w-0 flex-1">
                                 <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Total Sales</dt>
+                                    <dt className="text-sm font-medium text-gray-500 truncate">Sales Count</dt>
                                     <dd className="text-lg font-medium text-gray-900">{stats.totalSales}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Revenue */}
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                    <span className="text-lg font-bold">₹</span>
+                                </div>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
+                                    <dd className="text-lg font-medium text-gray-900">₹{stats.totalRevenue.toFixed(2)}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Net Profit */}
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${stats.totalProfit >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                    <span className="text-lg font-bold">₹</span>
+                                </div>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 truncate">Net Profit</dt>
+                                    <dd className={`text-lg font-medium ${stats.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {stats.totalProfit >= 0 ? '+' : ''}₹{stats.totalProfit.toFixed(2)}
+                                    </dd>
                                 </dl>
                             </div>
                         </div>

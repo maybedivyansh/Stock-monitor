@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Trash2, Edit } from 'lucide-react'
@@ -76,6 +78,12 @@ export default function ProductList() {
                                             Stock: {product.stock_quantity}
                                         </p>
                                     </div>
+                                    <Link
+                                        href={`/dashboard/products/${product.id}/edit`}
+                                        className="text-indigo-400 hover:text-indigo-600"
+                                    >
+                                        <Edit className="h-5 w-5" />
+                                    </Link>
                                     <button
                                         onClick={() => deleteProduct(product.id)}
                                         className="text-red-400 hover:text-red-600"

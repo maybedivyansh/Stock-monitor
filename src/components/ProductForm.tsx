@@ -14,21 +14,39 @@ const productSchema = z.object({
     price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
         message: 'Price must be a valid positive number',
     }),
-    stock_quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-        message: 'Stock quantity must be a valid positive number',
+    stock_quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number.isInteger(Number(val)), {
+        message: 'Stock quantity must be a valid positive integer',
     }),
     expiry_date: z.string().optional(),
-    low_stock_threshold: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-        message: 'Threshold must be a valid positive number',
+    low_stock_threshold: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number.isInteger(Number(val)), {
+        message: 'Threshold must be a valid positive integer',
     }),
-    expiry_alert_days: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-        message: 'Days must be a valid positive number',
+    expiry_alert_days: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number.isInteger(Number(val)), {
+        message: 'Days must be a valid positive integer',
     }),
+    procurement_price: z.string().refine((val) => !val || (!isNaN(Number(val)) && Number(val) >= 0), {
+        message: 'Procurement price must be a valid positive number',
+    }).optional(),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
 
-export default function ProductForm() {
+interface ProductFormProps {
+    initialData?: {
+        id: string
+        name: string
+        category: string
+        price: number
+        stock_quantity: number
+        expiry_date: string | null
+        low_stock_threshold: number
+        expiry_alert_days: number
+        procurement_price?: number
+        lot_size?: number
+    }
+}
+
+export default function ProductForm({ initialData }: ProductFormProps) {
     const [loading, setLoading] = useState(false)
     const router = useRouter()
     const supabase = createClientComponentClient()
@@ -39,13 +57,14 @@ export default function ProductForm() {
     } = useForm<ProductFormValues>({
         resolver: zodResolver(productSchema),
         defaultValues: {
-            name: '',
-            category: '',
-            price: '',
-            stock_quantity: '',
-            expiry_date: '',
-            low_stock_threshold: '50',
-            expiry_alert_days: '20',
+            name: initialData?.name || '',
+            category: initialData?.category || '',
+            price: initialData?.price?.toString() || '',
+            stock_quantity: initialData?.stock_quantity?.toString() || '',
+            expiry_date: initialData?.expiry_date || '',
+            low_stock_threshold: initialData?.low_stock_threshold?.toString() || '50',
+            expiry_alert_days: initialData?.expiry_alert_days?.toString() || '20',
+            procurement_price: initialData?.procurement_price?.toString() || '',
         },
     })
 
@@ -56,7 +75,7 @@ export default function ProductForm() {
 
             if (!user) throw new Error('No user found')
 
-            const { error } = await supabase.from('products').insert({
+            const productData = {
                 user_id: user.id,
                 name: data.name,
                 category: data.category,
@@ -65,11 +84,31 @@ export default function ProductForm() {
                 expiry_date: data.expiry_date || null,
                 low_stock_threshold: Number(data.low_stock_threshold),
                 expiry_alert_days: Number(data.expiry_alert_days),
-            })
+                procurement_price: data.procurement_price ? Number(data.procurement_price) : null,
+                lot_size: Number(data.stock_quantity), // Auto-set lot_size to stock_quantity
+            }
+
+            let error;
+            if (initialData) {
+                const { error: updateError } = await supabase
+                    .from('products')
+                    .update(productData)
+                    .eq('id', initialData.id)
+                error = updateError
+            } else {
+                const { error: insertError } = await supabase
+                    .from('products')
+                    .insert(productData)
+                error = insertError
+            }
 
             if (error) throw error
 
-            // Check if the newly added product triggers an alert
+            // Check if the product triggers an alert (only for new products or if logic requires for updates too, keeping it for both for now or just new? User asked for edit option, didn't specify alert logic change, but alerts usually for new items or status change. The original code only sent alerts on creation. I will keep it for creation only to match original behavior unless specified otherwise, OR I can leave it as is. The original code had it inside the function. I'll keep it for both to be safe, or maybe just creation? The prompt says "as I click on done it should update the database". It doesn't explicitly say send alerts on edit. I'll stick to the original logic which was inside the submit. Wait, the original logic was: insert -> check alert. Now it is: insert/update -> check alert. If I update stock to be low, maybe I want an alert? I'll leave the alert logic there for now, it seems beneficial.)
+
+            // Actually, looking at the original code, the alert logic was after the insert.
+            // I will keep it for both cases for now, as updating stock might trigger low stock.
+
             const stockQuantity = Number(data.stock_quantity)
             const expiryDate = data.expiry_date ? new Date(data.expiry_date) : null
             const today = new Date()
@@ -79,7 +118,6 @@ export default function ProductForm() {
             const isLowStock = stockQuantity < Number(data.low_stock_threshold)
             const isExpiringSoon = expiryDate && expiryDate <= sevenDaysFromNow && expiryDate >= today
 
-            // If product triggers an alert, send email notification
             if (isLowStock || isExpiringSoon) {
                 try {
                     await fetch('/api/send-alerts', {
@@ -96,21 +134,22 @@ export default function ProductForm() {
                                 expiry_date: data.expiry_date,
                                 low_stock_threshold: Number(data.low_stock_threshold),
                                 expiry_alert_days: Number(data.expiry_alert_days),
+                                procurement_price: data.procurement_price ? Number(data.procurement_price) : null,
+                                lot_size: Number(data.stock_quantity),
                             },
                         }),
                     })
-                    console.log('Alert email triggered for new product')
+                    console.log('Alert email triggered')
                 } catch (emailError) {
                     console.error('Failed to send alert email:', emailError)
-                    // Don't block the product creation if email fails
                 }
             }
 
             router.push('/dashboard/products')
             router.refresh()
-        } catch (error) {
-            console.error('Error adding product:', error)
-            alert('Error adding product')
+        } catch (error: any) {
+            console.error('Error saving product:', error)
+            alert(`Error saving product: ${error.message || 'Unknown error'}`)
         } finally {
             setLoading(false)
         }
@@ -158,6 +197,20 @@ export default function ProductForm() {
                 </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Total Procurement Cost (Optional)</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        {...register('procurement_price')}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border text-gray-900"
+                        placeholder="Total price for the whole lot"
+                    />
+                    {errors.procurement_price && <p className="mt-1 text-sm text-red-600">{errors.procurement_price.message}</p>}
+                </div>
+            </div>
+
             <div>
                 <label className="block text-sm font-medium text-gray-700">Expiry Date (Optional)</label>
                 <input
@@ -195,7 +248,7 @@ export default function ProductForm() {
                     disabled={loading}
                     className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
-                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Add Product'}
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (initialData ? 'Update Product' : 'Add Product')}
                 </button>
             </div>
         </form>

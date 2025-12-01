@@ -8,6 +8,7 @@ interface Sale {
     id: string
     quantity: number
     total_price: number
+    profit: number | null
     sale_date: string
     products: {
         name: string
@@ -31,6 +32,9 @@ export default function RecentSales({ key }: { key?: number }) {
           id,
           quantity,
           total_price,
+          quantity,
+          total_price,
+          profit,
           sale_date,
           products (
             name
@@ -71,6 +75,11 @@ export default function RecentSales({ key }: { key?: number }) {
                             </div>
                             <div className="text-right">
                                 <p className="text-sm font-bold text-gray-900">₹{sale.total_price}</p>
+                                {sale.profit !== null && (
+                                    <p className={`text-xs font-medium ${sale.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {sale.profit >= 0 ? '+' : ''}₹{sale.profit.toFixed(2)}
+                                    </p>
+                                )}
                                 <p className="text-xs text-gray-500">Qty: {sale.quantity}</p>
                             </div>
                         </div>
